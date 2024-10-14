@@ -431,8 +431,7 @@ If non-nil, disabled keywords of `leaf-expand-minimally-suppress-keywords'."
 
 (defcustom leaf-options-ensure-default-pin nil
   "Set the default pin with :package.
-'nil is using package manager default.
-This feature is not yet implemented."
+'nil is using package manager default."
   :type 'sexp
   :group 'leaf)
 
@@ -1087,7 +1086,7 @@ FN also accept list of FN."
      (when file
       (add-to-list 'leaf--paths (cons ',name file)))))
 
-(defmacro leaf-handler-package (name pkg _pin)
+(defmacro leaf-handler-package (name pkg pin)
   "Handler for ensuring the installation of PKG with package.el
 via PIN in the leaf block NAME."
   `(progn
@@ -1095,6 +1094,16 @@ via PIN in the leaf block NAME."
      (unless (package-installed-p ',pkg)
        (unless (assoc ',pkg package-archive-contents)
          (package-refresh-contents))
+       (let ((archive-name (if (not (eq ',pin 'nil))
+                               (symbol-name ',pin)
+                             leaf-options-ensure-default-pin)))
+         (when archive-name
+           (unless (boundp 'package-pinned-packages)
+             (setq package-pinned-packages ()))
+           (unless (assoc archive-name package-archives)
+             (error "Archive '%s' requested for package '%s' is not available"
+               archive-name (symbol-name ',pkg)))
+           (add-to-list 'package-pinned-packages (cons ',pkg archive-name))))
        (condition-case _err
            (package-install ',pkg)
          (error
